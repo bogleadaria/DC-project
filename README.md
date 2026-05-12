@@ -1,0 +1,1 @@
+ce are semn pe structura trebuie implementat, restul le avem din exemplul profului 
