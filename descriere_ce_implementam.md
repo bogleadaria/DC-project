@@ -48,9 +48,9 @@ module alu_top (
 
 | File | What it does | Builds on | Person |
 |---|---|---|---|
-| `add_sub.sv` | ADD and SUB | `adder.sv`, `gates.sv` | |
-| `logic_unit.sv` | AND, OR, XOR | `gates.sv`, `mux.sv` | |
-| `shift_unit.sv` | LEFT SHIFT, RIGHT SHIFT | `register.sv`, `counter_n_bits.sv` | |
+| `add_sub.sv` | ADD and SUB | `adder.sv`, `gates.sv` | `daria` |
+| `logic_unit.sv` | AND, OR, XOR | `gates.sv`, `mux.sv` | `daria` |
+| `shift_unit.sv` | LEFT SHIFT, RIGHT SHIFT | `register.sv`, `counter_n_bits.sv` | `daria` |
 | `csa.sv` | carry-save adder (for DIV) | `gates.sv` | |
 | `lut_quotient.sv` | quotient digit selector (for DIV) | `gates.sv` | |
 | `cu_srt4.sv` | division FSM | — | |
