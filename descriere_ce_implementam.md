@@ -51,11 +51,11 @@ module alu_top (
 | `add_sub.sv` | ADD and SUB | `adder.sv`, `gates.sv` | `daria` |
 | `logic_unit.sv` | AND, OR, XOR | `gates.sv`, `mux.sv` | `daria` |
 | `shift_unit.sv` | LEFT SHIFT, RIGHT SHIFT | `register.sv`, `counter_n_bits.sv` | `daria` |
-| `csa.sv` | carry-save adder (for DIV) | `gates.sv` | |
-| `lut_quotient.sv` | quotient digit selector (for DIV) | `gates.sv` | |
-| `cu_srt4.sv` | division FSM | — | |
-| `srt4_div.sv` | division datapath | `csa.sv`, `lut_quotient.sv`, `register.sv`, `adder.sv`, `counter_n_bits.sv` | |
-| `flags.sv` | Z, N, V flag logic | `gates.sv` | |
+| `csa.sv` | carry-save adder (for DIV) | `gates.sv` | `geo` |
+| `lut_quotient.sv` | quotient digit selector (for DIV) | `gates.sv` | `geo` |
+| `cu_srt4.sv` | division FSM | — | `geo` |
+| `srt4_div.sv` | division datapath | `csa.sv`, `lut_quotient.sv`, `register.sv`, `adder.sv`, `counter_n_bits.sv` | `geo` |
+| `flags.sv` | Z, N, V flag logic | `gates.sv` | `geo` |
 | `cu_alu.sv` | master FSM | — | |
 | `alu_top.sv` | top level, wires everything | everything above + `booth.sv`, `mux.sv` | |
 
