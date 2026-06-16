@@ -5,7 +5,7 @@
 // Version History
 // * June 9, 2025 (sebastian ardelean): Finished the implementation 
 
-//Modificari: - Inlocuit instantele register reg_A, q_Q, reg_Qm cu blocuri 
+//Modificari: - Am inlocuit instantele register reg_A, q_Q, reg_Qm cu blocuri 
 // always_ff explicite pentru control mai bun al reset-ului
 // - A_reg se reseteaza acum la 0 in LOAD_M (c[0]) intre operatii
 // - Adaugat port output q_reg_out (Q_reg direct) necesar in alu_top.sv
