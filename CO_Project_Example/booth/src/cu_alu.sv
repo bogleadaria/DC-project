@@ -6,11 +6,6 @@
 // Description : Master FSM for alu_top. Sequences LOAD_A/LOAD_B for
 //               serial units (Booth, SRT-4), dispatches all ops, waits
 //               for done, then latches result via c[9].
-//
-// FIX — WAIT state: serial units now go through LATCH (one extra cycle)
-//        instead of jumping directly to DONE. This gives booth_captured /
-//        div_captured one clock cycle to register the done_booth/done_div
-//        output before c[9] latches the mux result into `result`.
 //--------------------------------------------------------------------------
 `timescale 1ns / 1ps
 //--------------------------------------------------------------------------
