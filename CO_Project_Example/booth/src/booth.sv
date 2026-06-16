@@ -73,7 +73,7 @@ module booth (
 		       );
    
       
-// Înlocuiește reg_A instanțiat cu acest bloc direct în booth.sv:
+// Înlocuire reg_A instanțiat cu acest bloc direct în booth.sv:
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         A_reg <= 8'b0;
@@ -91,7 +91,7 @@ always_ff @(posedge clk or negedge rst_n) begin
     end
 end
    
-  // Înlocuiește instanțele q_Q și reg_Qm cu blocuri always_ff:
+  // Înlocuire instanțele q_Q și reg_Qm cu blocuri always_ff:
 
 always_ff @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
