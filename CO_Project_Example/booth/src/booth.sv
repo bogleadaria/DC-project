@@ -4,18 +4,24 @@
 // Description: Implementation of the Booth Multiplication Algorithm
 // Version History
 // * June 9, 2025 (sebastian ardelean): Finished the implementation 
+
+//Modificari: - Inlocuit instantele register reg_A, q_Q, reg_Qm cu blocuri 
+// always_ff explicite pentru control mai bun al reset-ului
+// - A_reg se reseteaza acum la 0 in LOAD_M (c[0]) intre operatii
+// - Adaugat port output q_reg_out (Q_reg direct) necesar in alu_top.sv
+// pentru a citi rezultatul Booth fara tristate bus
 // -------------------------------------------------------------------------
 `timescale 1ns/1ps
 
 module booth (
-	      input logic	       clk,
-	      input logic	       enable,
-	      input logic	       rst_n,
-	      input logic signed [7:0] inbus,
-	      output logic	       done,
-	      output logic [7:0]      outbus
-	      
-	      );
+    input  logic        clk,
+    input  logic        enable,
+    input  logic        rst_n,
+    input  logic signed [7:0] inbus,
+    output logic        done,
+    output logic [7:0]  outbus,
+    output logic [7:0]  q_reg_out    // ← NOU: Q_reg direct
+);
    //control signals
    logic [7:0] c;
    logic       stop;
@@ -67,43 +73,46 @@ module booth (
 		       );
    
       
+// Înlocuiește reg_A instanțiat cu acest bloc direct în booth.sv:
+always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        A_reg <= 8'b0;
+    end else begin
+        if (c[0]) begin
+            // LOAD_M: resetează A_reg la 0 pentru calcul proaspăt
+            A_reg <= 8'b0;
+        end else if (c[2]) begin
+            // SCAN: încarcă rezultatul adunării
+            A_reg <= adder_o;
+        end else if (c[4]) begin
+            // SHIFT: shift aritmetic dreapta
+            A_reg <= {A_reg[7], A_reg[7:1]};
+        end
+    end
+end
+   
+  // Înlocuiește instanțele q_Q și reg_Qm cu blocuri always_ff:
 
-   register #(.WIDTH(8)) reg_A (
-				.clk(clk),
-				.rst_n(rst_n),
-				.load_en(c[2]),
-				.shift_en(c[4]),
-                                .sr(A_reg[7]),
-                                .sl(1'b0),
-                                .shift_dir(c[4]),
-				.d(adder_o),
-				.q(A_reg)
-				);
-   
-   
-   register #(.WIDTH(8)) q_Q (
-			      .clk(clk),
-			      .rst_n(rst_n),
-			      .load_en(c[1]),
-			      .shift_en(c[4]),
-			      .sr(A_reg[0]),
-                              .sl(1'b0),
-                              .shift_dir(c[4]),
-			      .d(Q_input),
-			      .q(Q_reg)
-			      );
-   
-   register #(.WIDTH(1)) reg_Qm (
-				 .clk(clk),
-				 .rst_n(rst_n),
-				 .load_en(c[1]),
-				 .shift_en(c[4]),
-				 .sr(Q_reg[0]),
-                                 .sl(1'b0),
-                                 .shift_dir(c[4]),
-				 .d(1'b0),
-				 .q(Qm)
-				 );
+always_ff @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        Q_reg <= 8'b0;
+        Qm    <= 1'b0;
+    end else begin
+        if (c[0]) begin
+            // LOAD_M: resetează Q și Qm pentru operație nouă
+            Q_reg <= 8'b0;
+            Qm    <= 1'b0;
+        end else if (c[1]) begin
+            // LOAD_Q: încarcă multiplicatorul de pe inbus
+            Q_reg <= Q_input;
+            Qm    <= 1'b0;
+        end else if (c[4]) begin
+            // SHIFT: shift aritmetic dreapta
+            Q_reg <= {A_reg[0], Q_reg[7:1]};
+            Qm    <= Q_reg[0];
+        end
+    end
+end
 	      
 
    register #(.WIDTH(8)) reg_M (
@@ -129,6 +138,16 @@ module booth (
 			      .b(xor_o),
 			      .sum(adder_o)
 			      );
+//     // detect rising edge of enable (start pulse)
+//    logic enable_d;
+//    always_ff @(posedge clk or negedge rst_n)
+//        if (!rst_n) enable_d <= 1'b0;
+//        else        enable_d <= enable;
+//    logic enable_rise;
+//    assign enable_rise = enable & ~enable_d;
+  
+  
+  
 
    // Tri-state buffers
 
@@ -156,6 +175,7 @@ module booth (
 				   );
 
    assign outbus = output_buffer;
+   assign q_reg_out = Q_reg;           // ← adaugă la final, înainte de endmodule
    
    
 
