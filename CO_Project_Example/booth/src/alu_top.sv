@@ -11,7 +11,7 @@
 //
 // FIX — sub_r: sub capturat la latch time (c[9]) pentru flags corecte.
 // FIX — is_shift: acoperă atât LSHIFT (0111) cât și RSHIFT (1000).
-// FIX — mux tree folosește opcode_r stabil, nu opcode live.
+// FIX — mux tree folosește opcode_r stabil, nu opcode live..
 //--------------------------------------------------------------------------
 `timescale 1ns / 1ps
  
