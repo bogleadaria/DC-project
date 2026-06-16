@@ -59,6 +59,7 @@
 //   Ciclu LOAD_DVD(c[1]=1 din cu_alu): dividend pe inbus
 //   Dupa ITERS=8 iteratii: done=1, outbus=quotient
 //--------------------------------------------------------------------------
+
 `timescale 1ns/1ps
  
 module srt4_div #(parameter WIDTH = 8) (
