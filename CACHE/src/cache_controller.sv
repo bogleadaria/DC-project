@@ -1,5 +1,4 @@
 `include "defs.svh"
-
 `timescale 1ns/1ps
 
 module cache_controller
@@ -25,7 +24,8 @@ module cache_controller
     output logic [BLOCK_SIZE - 1:0]              mdout,
     output logic [TAG_WIDTH + INDEX_WIDTH - 1:0] maddress,
     output logic                                 mrden,
-    output logic                                 mwren
+    output logic                                 mwren,
+    output logic [(BLOCK_SIZE/WORD_SIZE)-1:0]    mwmask
     );
 
    typedef enum logic [2:0] {
@@ -33,8 +33,7 @@ module cache_controller
       STATE_READ_HIT,
       STATE_READ_MISS,
       STATE_WRITE_HIT,
-      STATE_WRITE_MISS,
-      STATE_REPLACE,
+      STATE_WRITE_MISS_MEM,
       STATE_FETCH,
       STATE_FILL
    } state_t;
@@ -49,7 +48,6 @@ module cache_controller
    localparam BLOCK_OFFSET_LSB  = 0;
 
    logic                         cache_valid[0:NBLOCKS - 1];
-   logic                         cache_dirty[0:NBLOCKS - 1];
    logic [TAG_WIDTH - 1:0]       cache_tag[0:NBLOCKS - 1];
    logic [BLOCK_SIZE - 1:0]      cache_mem[0:NBLOCKS - 1];
 
@@ -84,16 +82,21 @@ module cache_controller
       return result;
    endfunction
 
-   assign active_addr = (current_state == STATE_IDLE) ? caddress : req_addr;
-   assign active_index   = active_addr[INDEX_MSB:INDEX_LSB];
-   assign active_tag     = active_addr[TAG_MSB:TAG_LSB];
-   assign active_offset  = active_addr[BLOCK_OFFSET_MSB:BLOCK_OFFSET_LSB];
+   assign active_addr  = (current_state == STATE_IDLE) ? caddress : req_addr;
+   assign active_index = active_addr[INDEX_MSB:INDEX_LSB];
+   assign active_tag   = active_addr[TAG_MSB:TAG_LSB];
+   assign active_offset= active_addr[BLOCK_OFFSET_MSB:BLOCK_OFFSET_LSB];
 
-   assign lookup_hit = cache_valid[active_index]
-                       && (cache_tag[active_index] == active_tag);
-   assign hit = lookup_hit;
+   assign lookup_hit = cache_valid[active_index] && (cache_tag[active_index] == active_tag);
+   
+   assign hit = (current_state == STATE_READ_HIT) || 
+                (current_state == STATE_WRITE_HIT) || 
+                (current_state == STATE_WRITE_MISS_MEM);
 
    assign read_data = block_get_word(cache_mem[active_index], active_offset);
+
+   logic [BLOCK_SIZE - 1:0] wt_block_out;
+   assign wt_block_out = block_set_word(cache_mem[active_index], active_offset, req_wdata);
 
    always_comb begin
       next_state = current_state;
@@ -102,6 +105,7 @@ module cache_controller
       maddress = '0;
       mrden    = 1'b0;
       mwren    = 1'b0;
+      mwmask   = '0;
 
       case (current_state)
          STATE_IDLE: begin
@@ -112,7 +116,7 @@ module cache_controller
             else if (wren && lookup_hit)
                next_state = STATE_WRITE_HIT;
             else if (wren)
-               next_state = STATE_WRITE_MISS;
+               next_state = STATE_WRITE_MISS_MEM;
          end
 
          STATE_READ_HIT: begin
@@ -121,24 +125,23 @@ module cache_controller
          end
 
          STATE_READ_MISS: begin
-            if (cache_dirty[active_index])
-               next_state = STATE_REPLACE;
-            else
-               next_state = STATE_FETCH;
-         end
-
-         STATE_WRITE_MISS: begin
-            if (cache_dirty[active_index])
-               next_state = STATE_REPLACE;
-            else
-               next_state = STATE_FETCH;
-         end
-
-         STATE_REPLACE: begin
-            mwren    = 1'b1;
-            maddress = {cache_tag[active_index], active_index};
-            mdout    = cache_mem[active_index];
             next_state = STATE_FETCH;
+         end
+
+         STATE_WRITE_HIT: begin
+            mwren    = 1'b1;
+            mwmask   = '1;
+            maddress = {active_tag, active_index};
+            mdout    = wt_block_out;
+            next_state = STATE_IDLE;
+         end
+
+         STATE_WRITE_MISS_MEM: begin
+            mwren    = 1'b1;
+            mwmask   = (1 << active_offset);
+            maddress = {active_tag, active_index};
+            mdout    = block_set_word('0, active_offset, req_wdata);
+            next_state = STATE_IDLE;
          end
 
          STATE_FETCH: begin
@@ -150,14 +153,8 @@ module cache_controller
          STATE_FILL: begin
             if (req_read)
                next_state = STATE_READ_HIT;
-            else if (req_write)
-               next_state = STATE_WRITE_HIT;
             else
                next_state = STATE_IDLE;
-         end
-
-         STATE_WRITE_HIT: begin
-            next_state = STATE_IDLE;
          end
 
          default: begin
@@ -167,11 +164,9 @@ module cache_controller
    end
 
    integer k;
-
    initial begin
       for (k = 0; k < NBLOCKS; k = k + 1) begin
          cache_valid[k] = 1'b0;
-         cache_dirty[k] = 1'b0;
          cache_tag[k]   = '0;
          cache_mem[k]   = '0;
       end
@@ -184,9 +179,6 @@ module cache_controller
          req_write     <= 1'b0;
          for (k = 0; k < NBLOCKS; k = k + 1) begin
             cache_valid[k] <= 1'b0;
-            cache_dirty[k] <= 1'b0;
-            cache_tag[k]   <= '0;
-            cache_mem[k]   <= '0;
          end
       end else begin
          current_state <= next_state;
@@ -202,14 +194,12 @@ module cache_controller
             cache_mem[active_index]   <= mdin;
             cache_tag[active_index]   <= active_tag;
             cache_valid[active_index] <= 1'b1;
-            cache_dirty[active_index] <= 1'b0;
          end
 
          if (current_state == STATE_WRITE_HIT) begin
-            cache_mem[active_index]   <= block_set_word(
+            cache_mem[active_index] <= block_set_word(
                cache_mem[active_index], active_offset, req_wdata
             );
-            cache_dirty[active_index] <= 1'b1;
          end
       end
    end
